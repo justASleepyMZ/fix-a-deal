@@ -1,17 +1,41 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Wrench, Menu, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Wrench, Menu, X, User, HardHat, ShieldCheck, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useRole, type GuestRole } from "@/contexts/RoleContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const roleConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  user: { label: "Customer", icon: User, color: "bg-primary text-primary-foreground" },
+  worker: { label: "Worker", icon: HardHat, color: "bg-secondary text-secondary-foreground" },
+  admin: { label: "Admin", icon: ShieldCheck, color: "bg-destructive text-destructive-foreground" },
+};
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { role, setRole } = useRole();
 
   const links = [
     { to: "/", label: "Home" },
     { to: "/requests", label: "Browse Requests" },
     { to: "/how-it-works", label: "How It Works" },
   ];
+
+  const handleQuickRole = (r: GuestRole) => {
+    setRole(r);
+    setMobileOpen(false);
+  };
+
+  const currentRole = role ? roleConfig[role] : null;
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
@@ -36,13 +60,49 @@ const Navbar = () => {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
-          <Link to="/login">
-            <Button variant="ghost" size="sm">Log In</Button>
-          </Link>
-          <Link to="/register">
-            <Button variant="hero" size="sm">Sign Up</Button>
-          </Link>
+        <div className="hidden items-center gap-2 md:flex">
+          {role ? (
+            <>
+              <Badge className={`${currentRole?.color} gap-1.5 px-3 py-1`}>
+                {currentRole && <currentRole.icon className="h-3.5 w-3.5" />}
+                {currentRole?.label} Mode
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => setRole(null)}>
+                <LogOut className="mr-1.5 h-3.5 w-3.5" /> Exit
+              </Button>
+            </>
+          ) : (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <User className="h-3.5 w-3.5" /> Quick Access
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    Try without signing up
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleQuickRole("user")} className="gap-2 cursor-pointer">
+                    <User className="h-4 w-4" /> Browse as Customer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleQuickRole("worker")} className="gap-2 cursor-pointer">
+                    <HardHat className="h-4 w-4" /> Browse as Worker
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleQuickRole("admin")} className="gap-2 cursor-pointer">
+                    <ShieldCheck className="h-4 w-4" /> Browse as Admin
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Link to="/login">
+                <Button variant="ghost" size="sm">Log In</Button>
+              </Link>
+              <Link to="/register">
+                <Button variant="hero" size="sm">Sign Up</Button>
+              </Link>
+            </>
+          )}
         </div>
 
         <Button
@@ -63,14 +123,46 @@ const Navbar = () => {
                 <Button variant="ghost" className="w-full justify-start">{link.label}</Button>
               </Link>
             ))}
-            <div className="mt-2 flex gap-2">
-              <Link to="/login" className="flex-1" onClick={() => setMobileOpen(false)}>
-                <Button variant="outline" className="w-full">Log In</Button>
-              </Link>
-              <Link to="/register" className="flex-1" onClick={() => setMobileOpen(false)}>
-                <Button variant="hero" className="w-full">Sign Up</Button>
-              </Link>
-            </div>
+
+            {role ? (
+              <div className="mt-2 space-y-2">
+                <Badge className={`${currentRole?.color} gap-1.5 px-3 py-1 w-full justify-center`}>
+                  {currentRole && <currentRole.icon className="h-3.5 w-3.5" />}
+                  {currentRole?.label} Mode
+                </Badge>
+                <Button variant="outline" className="w-full" onClick={() => handleQuickRole(null)}>
+                  <LogOut className="mr-1.5 h-3.5 w-3.5" /> Exit Role
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 border-t pt-3">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Quick Access (no signup)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="outline" size="sm" className="flex-col gap-1 h-auto py-2" onClick={() => handleQuickRole("user")}>
+                      <User className="h-4 w-4" />
+                      <span className="text-[10px]">Customer</span>
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-col gap-1 h-auto py-2" onClick={() => handleQuickRole("worker")}>
+                      <HardHat className="h-4 w-4" />
+                      <span className="text-[10px]">Worker</span>
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-col gap-1 h-auto py-2" onClick={() => handleQuickRole("admin")}>
+                      <ShieldCheck className="h-4 w-4" />
+                      <span className="text-[10px]">Admin</span>
+                    </Button>
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Link to="/login" className="flex-1" onClick={() => setMobileOpen(false)}>
+                    <Button variant="outline" className="w-full">Log In</Button>
+                  </Link>
+                  <Link to="/register" className="flex-1" onClick={() => setMobileOpen(false)}>
+                    <Button variant="hero" className="w-full">Sign Up</Button>
+                  </Link>
+                </div>
+              </>
+            )}
           </nav>
         </div>
       )}
