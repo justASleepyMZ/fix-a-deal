@@ -3,9 +3,18 @@ import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { mockRequests } from "@/data/mockData";
 import { useParams, Link } from "react-router-dom";
-import { MapPin, Clock, DollarSign, ArrowLeft, Star, MessageSquare, User } from "lucide-react";
+import {
+  MapPin, Clock, DollarSign, ArrowLeft, Star, MessageSquare, User,
+  Trash2, Pencil, Ban, HardHat, Send, XCircle, CheckCircle2, ShieldCheck, AlertTriangle
+} from "lucide-react";
+import { useRole } from "@/contexts/RoleContext";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const mockOffers = [
   { id: "1", workerName: "Sergey K.", rating: 4.8, reviews: 42, price: 12000, message: "I can fix this quickly. Have 10+ years experience with kitchen plumbing.", avatar: "S" },
@@ -16,6 +25,22 @@ const mockOffers = [
 const RequestDetail = () => {
   const { id } = useParams();
   const request = mockRequests.find((r) => r.id === id) || mockRequests[0];
+  const { role } = useRole();
+
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [offerPrice, setOfferPrice] = useState("");
+  const [offerMessage, setOfferMessage] = useState("");
+
+  const handleSubmitOffer = () => {
+    if (!offerPrice) {
+      toast.error("Please enter your proposed price");
+      return;
+    }
+    toast.success(`Offer of $${offerPrice} submitted successfully!`);
+    setShowOfferForm(false);
+    setOfferPrice("");
+    setOfferMessage("");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-surface">
@@ -50,6 +75,93 @@ const RequestDetail = () => {
               <p className="mt-4 text-muted-foreground leading-relaxed">{request.description}</p>
             </div>
 
+            {/* ===== ROLE-SPECIFIC: Admin actions bar ===== */}
+            {role === "admin" && (
+              <Card className="border-destructive/30 bg-destructive/5 shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck className="h-4 w-4 text-destructive" />
+                    <span className="text-sm font-semibold">Admin Actions</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("Request editing form coming soon!")}>
+                      <Pencil className="h-3.5 w-3.5" /> Edit Request
+                    </Button>
+                    <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => toast.success("Request deleted (demo)")}>
+                      <Trash2 className="h-3.5 w-3.5" /> Delete Request
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("User has been suspended (demo)")}>
+                      <Ban className="h-3.5 w-3.5" /> Suspend Author
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.info("Content flagged for review (demo)")}>
+                      <AlertTriangle className="h-3.5 w-3.5" /> Flag Content
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ===== ROLE-SPECIFIC: Customer actions bar ===== */}
+            {role === "user" && (
+              <Card className="border-primary/30 bg-accent shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Your Request Actions</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("Edit form coming soon!")}>
+                      <Pencil className="h-3.5 w-3.5" /> Edit Request
+                    </Button>
+                    <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => toast.success("Request cancelled (demo)")}>
+                      <XCircle className="h-3.5 w-3.5" /> Cancel Request
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ===== Worker: Submit Offer Form ===== */}
+            {role === "worker" && showOfferForm && (
+              <Card className="border-secondary/50 shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <HardHat className="h-5 w-5" /> Submit Your Offer
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="offer-price">Your Proposed Price ($)</Label>
+                    <Input
+                      id="offer-price"
+                      type="number"
+                      placeholder="e.g. 12000"
+                      value={offerPrice}
+                      onChange={(e) => setOfferPrice(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="offer-message">Message to Customer</Label>
+                    <Textarea
+                      id="offer-message"
+                      placeholder="Describe your experience, availability, and why you're the right person for this job..."
+                      value={offerMessage}
+                      onChange={(e) => setOfferMessage(e.target.value)}
+                      className="mt-1"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="hero" className="gap-1.5" onClick={handleSubmitOffer}>
+                      <Send className="h-4 w-4" /> Submit Offer
+                    </Button>
+                    <Button variant="ghost" onClick={() => setShowOfferForm(false)}>Cancel</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Offers */}
             <div>
               <h2 className="font-display text-xl font-bold">Offers ({mockOffers.length})</h2>
@@ -76,8 +188,30 @@ const RequestDetail = () => {
                         <div className="text-right shrink-0">
                           <div className="font-display text-lg font-bold">${offer.price.toLocaleString()}</div>
                           <div className="mt-1 flex gap-1.5">
-                            <Button size="sm" variant="hero">Accept</Button>
-                            <Button size="sm" variant="ghost"><MessageSquare className="h-3.5 w-3.5" /></Button>
+                            {/* Customer can accept offers */}
+                            {role === "user" && (
+                              <Button size="sm" variant="hero" className="gap-1" onClick={() => toast.success(`Accepted offer from ${offer.workerName} (demo)`)}>
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Accept
+                              </Button>
+                            )}
+                            {/* Admin can remove offers */}
+                            {role === "admin" && (
+                              <Button size="sm" variant="destructive" className="gap-1" onClick={() => toast.success(`Offer removed (demo)`)}>
+                                <Trash2 className="h-3.5 w-3.5" /> Remove
+                              </Button>
+                            )}
+                            {/* Everyone can message */}
+                            {role && (
+                              <Button size="sm" variant="ghost" onClick={() => toast.info("Chat coming soon!")}>
+                                <MessageSquare className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {/* No role: prompt */}
+                            {!role && (
+                              <Button size="sm" variant="outline" onClick={() => toast.info("Select a role via Quick Access to interact")}>
+                                Accept
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -120,9 +254,30 @@ const RequestDetail = () => {
               </CardContent>
             </Card>
 
-            <Button variant="hero" className="w-full gap-2">
-              <MessageSquare className="h-4 w-4" /> Make an Offer
-            </Button>
+            {/* Sidebar role-specific CTA */}
+            {role === "worker" && !showOfferForm && (
+              <Button variant="hero" className="w-full gap-2" onClick={() => setShowOfferForm(true)}>
+                <HardHat className="h-4 w-4" /> Submit My Offer
+              </Button>
+            )}
+
+            {role === "user" && (
+              <Button variant="outline" className="w-full gap-2" onClick={() => toast.info("Chat coming soon!")}>
+                <MessageSquare className="h-4 w-4" /> Message Workers
+              </Button>
+            )}
+
+            {role === "admin" && (
+              <Button variant="destructive" className="w-full gap-2" onClick={() => toast.success("Request deleted (demo)")}>
+                <Trash2 className="h-4 w-4" /> Delete Request
+              </Button>
+            )}
+
+            {!role && (
+              <Button variant="hero" className="w-full gap-2" onClick={() => toast.info("Select a role via Quick Access to make an offer")}>
+                <MessageSquare className="h-4 w-4" /> Make an Offer
+              </Button>
+            )}
           </div>
         </div>
       </div>
