@@ -1,5 +1,5 @@
-import { motion, type Variants } from "framer-motion";
-import type { EasingDefinition } from "framer-motion";
+import { motion, type Variants, type EasingDefinition } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ServiceRequestCard from "@/components/ServiceRequestCard";
 import { mockRequests, categories } from "@/data/mockData";
