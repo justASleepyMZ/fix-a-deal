@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { motion, type Variants } from "framer-motion";
+import type { EasingDefinition } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import ServiceRequestCard from "@/components/ServiceRequestCard";
 import { mockRequests, categories } from "@/data/mockData";
@@ -8,12 +8,12 @@ import { ArrowRight, Shield, MessageSquare, Star, CheckCircle2 } from "lucide-re
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" },
+    transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" as EasingDefinition },
   }),
 };
 
