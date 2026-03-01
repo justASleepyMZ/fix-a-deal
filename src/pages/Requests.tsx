@@ -4,12 +4,15 @@ import ServiceRequestCard from "@/components/ServiceRequestCard";
 import { mockRequests, categories } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, Plus, HardHat, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { useRole } from "@/contexts/RoleContext";
+import { toast } from "sonner";
 
 const Requests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { role } = useRole();
 
   const filtered = mockRequests.filter((r) => {
     const matchesSearch =
@@ -30,7 +33,36 @@ const Requests = () => {
             <h1 className="font-display text-2xl font-bold md:text-3xl">Service Requests</h1>
             <p className="mt-1 text-muted-foreground">{filtered.length} active requests</p>
           </div>
-          <Button variant="hero">+ Post a Request</Button>
+
+          <div className="flex gap-2">
+            {/* Customer: Post new request */}
+            {role === "user" && (
+              <Button variant="hero" onClick={() => toast.success("Create Request form coming soon!")}>
+                <Plus className="mr-1.5 h-4 w-4" /> Post a Request
+              </Button>
+            )}
+
+            {/* Worker: indicator */}
+            {role === "worker" && (
+              <Button variant="outline" className="pointer-events-none gap-1.5">
+                <HardHat className="h-4 w-4" /> Browse &amp; submit offers below
+              </Button>
+            )}
+
+            {/* Admin: moderation hint */}
+            {role === "admin" && (
+              <Button variant="outline" className="pointer-events-none gap-1.5">
+                <ShieldCheck className="h-4 w-4" /> Moderation mode active
+              </Button>
+            )}
+
+            {/* Not logged in */}
+            {!role && (
+              <Button variant="hero" onClick={() => toast.info("Select a role via Quick Access or sign up to post requests.")}>
+                <Plus className="mr-1.5 h-4 w-4" /> Post a Request
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search & Filters */}
