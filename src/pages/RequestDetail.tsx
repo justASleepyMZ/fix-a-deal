@@ -10,7 +10,7 @@ import { mockRequests } from "@/data/mockData";
 import { useParams, Link } from "react-router-dom";
 import {
   MapPin, Clock, DollarSign, ArrowLeft, Star, MessageSquare, User,
-  Trash2, Pencil, Ban, HardHat, Send, XCircle, CheckCircle2, ShieldCheck, AlertTriangle
+  Trash2, Pencil, Ban, HardHat, Send, XCircle, CheckCircle2, ShieldCheck, AlertTriangle, Building2, Plus
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { useState } from "react";
@@ -102,12 +102,12 @@ const RequestDetail = () => {
             )}
 
             {/* ===== ROLE-SPECIFIC: Customer actions bar ===== */}
-            {role === "user" && (
+            {(role === "user" || role === "company") && (
               <Card className="border-primary/30 bg-accent shadow-card">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Your Request Actions</span>
+                    {role === "company" ? <Building2 className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-primary" />}
+                    <span className="text-sm font-semibold">{role === "company" ? "Company" : "Your"} Request Actions</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("Edit form coming soon!")}>
@@ -121,8 +121,8 @@ const RequestDetail = () => {
               </Card>
             )}
 
-            {/* ===== Worker: Submit Offer Form ===== */}
-            {role === "worker" && showOfferForm && (
+            {/* ===== Worker/Company: Submit Offer Form ===== */}
+            {(role === "worker" || role === "company") && showOfferForm && (
               <Card className="border-secondary/50 shadow-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -189,7 +189,7 @@ const RequestDetail = () => {
                           <div className="font-display text-lg font-bold">${offer.price.toLocaleString()}</div>
                           <div className="mt-1 flex gap-1.5">
                             {/* Customer can accept offers */}
-                            {role === "user" && (
+                            {(role === "user" || role === "company") && (
                               <Button size="sm" variant="hero" className="gap-1" onClick={() => toast.success(`Accepted offer from ${offer.workerName} (demo)`)}>
                                 <CheckCircle2 className="h-3.5 w-3.5" /> Accept
                               </Button>
@@ -255,13 +255,13 @@ const RequestDetail = () => {
             </Card>
 
             {/* Sidebar role-specific CTA */}
-            {role === "worker" && !showOfferForm && (
+            {(role === "worker" || role === "company") && !showOfferForm && (
               <Button variant="hero" className="w-full gap-2" onClick={() => setShowOfferForm(true)}>
-                <HardHat className="h-4 w-4" /> Submit My Offer
+                {role === "company" ? <Building2 className="h-4 w-4" /> : <HardHat className="h-4 w-4" />} Submit My Offer
               </Button>
             )}
 
-            {role === "user" && (
+            {(role === "user" || role === "company") && (
               <Button variant="outline" className="w-full gap-2" onClick={() => toast.info("Chat coming soon!")}>
                 <MessageSquare className="h-4 w-4" /> Message Workers
               </Button>

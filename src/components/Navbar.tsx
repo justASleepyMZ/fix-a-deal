@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, Menu, X, User, HardHat, ShieldCheck, LogOut } from "lucide-react";
+import { Wrench, Menu, X, User, HardHat, ShieldCheck, LogOut, Building2 } from "lucide-react";
 import { useState } from "react";
 import { useRole, type GuestRole } from "@/contexts/RoleContext";
 import {
@@ -16,6 +16,7 @@ import {
 const roleConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   user: { label: "Customer", icon: User, color: "bg-primary text-primary-foreground" },
   worker: { label: "Worker", icon: HardHat, color: "bg-secondary text-secondary-foreground" },
+  company: { label: "Company", icon: Building2, color: "bg-accent text-accent-foreground" },
   admin: { label: "Admin", icon: ShieldCheck, color: "bg-destructive text-destructive-foreground" },
 };
 
@@ -90,6 +91,9 @@ const Navbar = () => {
                   <DropdownMenuItem onClick={() => handleQuickRole("worker")} className="gap-2 cursor-pointer">
                     <HardHat className="h-4 w-4" /> Browse as Worker
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleQuickRole("company")} className="gap-2 cursor-pointer">
+                    <Building2 className="h-4 w-4" /> Browse as Company
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleQuickRole("admin")} className="gap-2 cursor-pointer">
                     <ShieldCheck className="h-4 w-4" /> Browse as Admin
                   </DropdownMenuItem>
@@ -138,7 +142,7 @@ const Navbar = () => {
               <>
                 <div className="mt-2 border-t pt-3">
                   <p className="mb-2 text-xs font-medium text-muted-foreground">Quick Access (no signup)</p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <Button variant="outline" size="sm" className="flex-col gap-1 h-auto py-2" onClick={() => handleQuickRole("user")}>
                       <User className="h-4 w-4" />
                       <span className="text-[10px]">Customer</span>
@@ -146,6 +150,10 @@ const Navbar = () => {
                     <Button variant="outline" size="sm" className="flex-col gap-1 h-auto py-2" onClick={() => handleQuickRole("worker")}>
                       <HardHat className="h-4 w-4" />
                       <span className="text-[10px]">Worker</span>
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-col gap-1 h-auto py-2" onClick={() => handleQuickRole("company")}>
+                      <Building2 className="h-4 w-4" />
+                      <span className="text-[10px]">Company</span>
                     </Button>
                     <Button variant="outline" size="sm" className="flex-col gap-1 h-auto py-2" onClick={() => handleQuickRole("admin")}>
                       <ShieldCheck className="h-4 w-4" />
