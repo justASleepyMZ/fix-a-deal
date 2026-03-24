@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 
-export type GuestRole = "user" | "worker" | "admin" | null;
+export type GuestRole = "user" | "worker" | "admin" | "company" | null;
 
 interface RoleContextType {
   role: GuestRole;

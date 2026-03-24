@@ -4,7 +4,7 @@ import ServiceRequestCard from "@/components/ServiceRequestCard";
 import { mockRequests, categories } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, HardHat, ShieldCheck } from "lucide-react";
+import { Search, Plus, HardHat, ShieldCheck, Building2 } from "lucide-react";
 import { useState } from "react";
 import { useRole } from "@/contexts/RoleContext";
 import { toast } from "sonner";
@@ -47,6 +47,18 @@ const Requests = () => {
               <Button variant="outline" className="pointer-events-none gap-1.5">
                 <HardHat className="h-4 w-4" /> Browse &amp; submit offers below
               </Button>
+            )}
+
+            {/* Company: can post and take requests */}
+            {role === "company" && (
+              <div className="flex gap-2">
+                <Button variant="hero" onClick={() => toast.success("Create Request form coming soon!")}>
+                  <Plus className="mr-1.5 h-4 w-4" /> Post a Request
+                </Button>
+                <Button variant="outline" className="gap-1.5">
+                  <Building2 className="h-4 w-4" /> Can also submit offers
+                </Button>
+              </div>
             )}
 
             {/* Admin: moderation hint */}
