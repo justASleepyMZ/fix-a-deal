@@ -33,9 +33,6 @@ const Index = () => {
             variants={fadeUp}
             custom={0}
           >
-            <Badge variant="accent" className="mb-4 px-3 py-1 text-sm">
-              Trusted by 10,000+ users
-            </Badge>
             <h1 className="font-display text-4xl font-extrabold leading-tight md:text-6xl">
               Find Repair Pros.{" "}
               <span className="text-gradient-primary">Your Price.</span>
@@ -199,7 +196,7 @@ const Index = () => {
               </Button>
             </Link>
             <Link to="/requests">
-              <Button variant="outline" size="lg" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 text-base">
+              <Button variant="outline" size="lg" className="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 text-base">
                 Browse Requests
               </Button>
             </Link>
