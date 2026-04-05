@@ -1,9 +1,10 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wrench, Menu, X, User, HardHat, ShieldCheck, LogOut, Building2 } from "lucide-react";
 import { useState } from "react";
 import { useRole, type GuestRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { role, setRole } = useRole();
+  const { user, profile, userRole, signOut, loading } = useAuth();
 
   const links = [
     { to: "/", label: "Home" },
@@ -36,7 +38,9 @@ const Navbar = () => {
     setMobileOpen(false);
   };
 
-  const currentRole = role ? roleConfig[role] : null;
+  // Determine the active role: authenticated role takes priority
+  const activeRole = user ? userRole : role;
+  const currentRole = activeRole ? roleConfig[activeRole] : null;
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
@@ -62,7 +66,20 @@ const Navbar = () => {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          {role ? (
+          {user ? (
+            <>
+              <Badge className={`${currentRole?.color ?? "bg-muted text-muted-foreground"} gap-1.5 px-3 py-1`}>
+                {currentRole && <currentRole.icon className="h-3.5 w-3.5" />}
+                {currentRole?.label ?? "User"}
+              </Badge>
+              <span className="text-sm font-medium truncate max-w-[120px]">
+                {profile?.display_name ?? user.email}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign Out
+              </Button>
+            </>
+          ) : role ? (
             <>
               <Badge className={`${currentRole?.color} gap-1.5 px-3 py-1`}>
                 {currentRole && <currentRole.icon className="h-3.5 w-3.5" />}
@@ -128,7 +145,17 @@ const Navbar = () => {
               </Link>
             ))}
 
-            {role ? (
+            {user ? (
+              <div className="mt-2 space-y-2">
+                <Badge className={`${currentRole?.color ?? "bg-muted text-muted-foreground"} gap-1.5 px-3 py-1 w-full justify-center`}>
+                  {currentRole && <currentRole.icon className="h-3.5 w-3.5" />}
+                  {profile?.display_name ?? user.email}
+                </Badge>
+                <Button variant="outline" className="w-full" onClick={() => { signOut(); setMobileOpen(false); }}>
+                  <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign Out
+                </Button>
+              </div>
+            ) : role ? (
               <div className="mt-2 space-y-2">
                 <Badge className={`${currentRole?.color} gap-1.5 px-3 py-1 w-full justify-center`}>
                   {currentRole && <currentRole.icon className="h-3.5 w-3.5" />}
