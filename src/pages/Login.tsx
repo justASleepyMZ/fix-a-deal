@@ -3,10 +3,36 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
-import { Wrench } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Wrench, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await signIn(email, password);
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Welcome back!");
+      navigate("/");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-surface">
       <Navbar />
@@ -20,16 +46,19 @@ const Login = () => {
             <p className="mt-1 text-sm text-muted-foreground">Sign in to your FixFlow account</p>
           </div>
 
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" className="mt-1" />
+              <Input id="email" type="email" placeholder="you@example.com" className="mt-1" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" className="mt-1" />
+              <Input id="password" type="password" placeholder="••••••••" className="mt-1" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
-            <Button variant="hero" className="w-full" type="submit">Sign In</Button>
+            <Button variant="hero" className="w-full" type="submit" disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign In
+            </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
