@@ -72,9 +72,11 @@ const Navbar = () => {
                 {currentRole && <currentRole.icon className="h-3.5 w-3.5" />}
                 {currentRole?.label ?? "User"}
               </Badge>
-              <span className="text-sm font-medium truncate max-w-[120px]">
-                {profile?.display_name ?? user.email}
-              </span>
+              <Link to="/profile">
+                <Button variant="ghost" size="sm" className="font-medium truncate max-w-[120px]">
+                  {profile?.display_name ?? user.email}
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
                 <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign Out
               </Button>
