@@ -6,41 +6,179 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { mockRequests } from "@/data/mockData";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { useParams, Link } from "react-router-dom";
 import {
-  MapPin, Clock, DollarSign, ArrowLeft, Star, MessageSquare, User,
-  Trash2, Pencil, Ban, HardHat, Send, XCircle, CheckCircle2, ShieldCheck, AlertTriangle, Building2, Plus
+  MapPin, Clock, DollarSign, ArrowLeft, MessageSquare, User,
+  HardHat, Send, CheckCircle2, Building2, Loader2
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
-import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import OfferChat from "@/components/OfferChat";
 
-const mockOffers = [
-  { id: "1", workerName: "Sergey K.", rating: 4.8, reviews: 42, price: 12000, message: "I can fix this quickly. Have 10+ years experience with kitchen plumbing.", avatar: "S" },
-  { id: "2", workerName: "Dmitry A.", rating: 4.5, reviews: 28, price: 14500, message: "Available tomorrow. Will bring all necessary parts.", avatar: "D" },
-  { id: "3", workerName: "Aidar B.", rating: 4.9, reviews: 67, price: 13000, message: "Certified plumber. Can also check your other fixtures at no extra charge.", avatar: "A" },
-];
+interface ServiceRequest {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  category: string;
+  city: string | null;
+  district: string | null;
+  address: string | null;
+  budget: number | null;
+  status: string;
+  photos: string[];
+  created_at: string;
+}
+
+interface Offer {
+  id: string;
+  worker_id: string;
+  price: number;
+  message: string | null;
+  status: string;
+  created_at: string;
+  worker_name?: string;
+}
 
 const RequestDetail = () => {
   const { id } = useParams();
-  const request = mockRequests.find((r) => r.id === id) || mockRequests[0];
-  const { role } = useRole();
+  const { effectiveRole } = useRole();
+  const { user } = useAuth();
 
+  const [request, setRequest] = useState<ServiceRequest | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [offerPrice, setOfferPrice] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
+  const [submittingOffer, setSubmittingOffer] = useState(false);
+  const [chatOfferId, setChatOfferId] = useState<string | null>(null);
+  const [chatOtherName, setChatOtherName] = useState("User");
 
-  const handleSubmitOffer = () => {
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchRequest = async () => {
+      const { data, error } = await supabase
+        .from("service_requests")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error || !data) {
+        setLoading(false);
+        return;
+      }
+      setRequest(data as ServiceRequest);
+
+      // Fetch offers if user is the request owner or has made an offer
+      if (user) {
+        const { data: offersData } = await supabase
+          .from("offers")
+          .select("*")
+          .eq("request_id", id)
+          .order("created_at", { ascending: true });
+
+        if (offersData) {
+          // Fetch worker display names
+          const workerIds = offersData.map((o) => o.worker_id);
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, display_name")
+            .in("user_id", workerIds);
+
+          const profileMap: Record<string, string> = {};
+          profiles?.forEach((p) => {
+            profileMap[p.user_id] = p.display_name || "Worker";
+          });
+
+          setOffers(
+            offersData.map((o) => ({
+              ...o,
+              price: Number(o.price),
+              worker_name: profileMap[o.worker_id] || "Worker",
+            }))
+          );
+        }
+      }
+
+      setLoading(false);
+    };
+
+    fetchRequest();
+  }, [id, user]);
+
+  const handleSubmitOffer = async () => {
+    if (!user || !id) return;
     if (!offerPrice) {
       toast.error("Please enter your proposed price");
       return;
     }
-    toast.success(`Offer of $${offerPrice} submitted successfully!`);
-    setShowOfferForm(false);
-    setOfferPrice("");
-    setOfferMessage("");
+
+    setSubmittingOffer(true);
+    const { data, error } = await supabase
+      .from("offers")
+      .insert({
+        request_id: id,
+        worker_id: user.id,
+        price: parseFloat(offerPrice),
+        message: offerMessage.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Offer submitted!");
+      setOffers((prev) => [...prev, { ...data, price: Number(data.price), worker_name: "You" }]);
+      setShowOfferForm(false);
+      setOfferPrice("");
+      setOfferMessage("");
+      // Auto-open chat
+      setChatOfferId(data.id);
+      setChatOtherName("Request Owner");
+    }
+    setSubmittingOffer(false);
   };
+
+  const openChat = (offer: Offer) => {
+    setChatOfferId(offer.id);
+    const isOwner = request?.user_id === user?.id;
+    setChatOtherName(isOwner ? (offer.worker_name || "Worker") : "Request Owner");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-surface">
+        <Navbar />
+        <div className="container flex items-center justify-center py-32">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!request) {
+    return (
+      <div className="min-h-screen bg-gradient-surface">
+        <Navbar />
+        <div className="container py-20 text-center">
+          <h1 className="text-2xl font-bold">Request not found</h1>
+          <Link to="/requests"><Button variant="ghost" className="mt-4">Back to Requests</Button></Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const isOwner = user?.id === request.user_id;
+  const canMakeOffer = user && (effectiveRole === "worker" || effectiveRole === "company") && !isOwner;
+  const alreadyOffered = offers.some((o) => o.worker_id === user?.id);
 
   return (
     <div className="min-h-screen bg-gradient-surface">
@@ -56,9 +194,16 @@ const RequestDetail = () => {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {request.imageUrl && (
+            {request.photos && request.photos.length > 0 && (
               <div className="overflow-hidden rounded-xl">
-                <img src={request.imageUrl} alt={request.title} className="h-64 w-full object-cover md:h-80" />
+                <img src={request.photos[0]} alt={request.title} className="h-64 w-full object-cover md:h-80" />
+              </div>
+            )}
+            {request.photos && request.photos.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto">
+                {request.photos.slice(1).map((p, i) => (
+                  <img key={i} src={p} alt="" className="h-20 w-20 rounded-lg object-cover border" />
+                ))}
               </div>
             )}
 
@@ -69,60 +214,19 @@ const RequestDetail = () => {
               </div>
               <h1 className="mt-3 font-display text-2xl font-bold md:text-3xl">{request.title}</h1>
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{request.city}, {request.district}</span>
-                <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{request.createdAt}</span>
+                {(request.city || request.district) && (
+                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{[request.city, request.district].filter(Boolean).join(", ")}</span>
+                )}
+                <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{new Date(request.created_at).toLocaleDateString()}</span>
               </div>
               <p className="mt-4 text-muted-foreground leading-relaxed">{request.description}</p>
+              {request.address && (
+                <p className="mt-2 text-sm text-muted-foreground"><MapPin className="inline h-3.5 w-3.5 mr-1" />Address: {request.address}</p>
+              )}
             </div>
 
-            {/* ===== ROLE-SPECIFIC: Admin actions bar ===== */}
-            {role === "admin" && (
-              <Card className="border-destructive/30 bg-destructive/5 shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <ShieldCheck className="h-4 w-4 text-destructive" />
-                    <span className="text-sm font-semibold">Admin Actions</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("Request editing form coming soon!")}>
-                      <Pencil className="h-3.5 w-3.5" /> Edit Request
-                    </Button>
-                    <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => toast.success("Request deleted (demo)")}>
-                      <Trash2 className="h-3.5 w-3.5" /> Delete Request
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("User has been suspended (demo)")}>
-                      <Ban className="h-3.5 w-3.5" /> Suspend Author
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.info("Content flagged for review (demo)")}>
-                      <AlertTriangle className="h-3.5 w-3.5" /> Flag Content
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ===== ROLE-SPECIFIC: Customer actions bar ===== */}
-            {(role === "user" || role === "company") && (
-              <Card className="border-primary/30 bg-accent shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    {role === "company" ? <Building2 className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-primary" />}
-                    <span className="text-sm font-semibold">{role === "company" ? "Company" : "Your"} Request Actions</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("Edit form coming soon!")}>
-                      <Pencil className="h-3.5 w-3.5" /> Edit Request
-                    </Button>
-                    <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => toast.success("Request cancelled (demo)")}>
-                      <XCircle className="h-3.5 w-3.5" /> Cancel Request
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ===== Worker/Company: Submit Offer Form ===== */}
-            {(role === "worker" || role === "company") && showOfferForm && (
+            {/* Offer form */}
+            {canMakeOffer && !alreadyOffered && showOfferForm && (
               <Card className="border-secondary/50 shadow-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -131,30 +235,16 @@ const RequestDetail = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="offer-price">Your Proposed Price ($)</Label>
-                    <Input
-                      id="offer-price"
-                      type="number"
-                      placeholder="e.g. 12000"
-                      value={offerPrice}
-                      onChange={(e) => setOfferPrice(e.target.value)}
-                      className="mt-1"
-                    />
+                    <Label htmlFor="offer-price">Your Proposed Price (₸)</Label>
+                    <Input id="offer-price" type="number" placeholder="e.g. 12000" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} className="mt-1" />
                   </div>
                   <div>
                     <Label htmlFor="offer-message">Message to Customer</Label>
-                    <Textarea
-                      id="offer-message"
-                      placeholder="Describe your experience, availability, and why you're the right person for this job..."
-                      value={offerMessage}
-                      onChange={(e) => setOfferMessage(e.target.value)}
-                      className="mt-1"
-                      rows={3}
-                    />
+                    <Textarea id="offer-message" placeholder="Describe your experience and availability..." value={offerMessage} onChange={(e) => setOfferMessage(e.target.value)} className="mt-1" rows={3} />
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="hero" className="gap-1.5" onClick={handleSubmitOffer}>
-                      <Send className="h-4 w-4" /> Submit Offer
+                    <Button variant="hero" className="gap-1.5" onClick={handleSubmitOffer} disabled={submittingOffer}>
+                      {submittingOffer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Submit Offer
                     </Button>
                     <Button variant="ghost" onClick={() => setShowOfferForm(false)}>Cancel</Button>
                   </div>
@@ -162,125 +252,113 @@ const RequestDetail = () => {
               </Card>
             )}
 
-            {/* Offers */}
-            <div>
-              <h2 className="font-display text-xl font-bold">Offers ({mockOffers.length})</h2>
-              <div className="mt-4 space-y-3">
-                {mockOffers.map((offer) => (
-                  <Card key={offer.id} className="shadow-card">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-display font-bold text-primary-foreground">
-                            {offer.avatar}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{offer.workerName}</span>
-                              <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                                <Star className="h-3 w-3 fill-secondary text-secondary" />
-                                {offer.rating} ({offer.reviews})
-                              </span>
+            {/* Offers list */}
+            {user && (isOwner || offers.length > 0) && (
+              <div>
+                <h2 className="font-display text-xl font-bold">Offers ({offers.length})</h2>
+                <div className="mt-4 space-y-3">
+                  {offers.map((offer) => (
+                    <Card key={offer.id} className="shadow-card">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-display font-bold text-primary-foreground">
+                              {(offer.worker_name || "W")[0]}
                             </div>
-                            <p className="mt-1 text-sm text-muted-foreground">{offer.message}</p>
+                            <div>
+                              <span className="font-semibold">{offer.worker_name}</span>
+                              {offer.message && <p className="mt-1 text-sm text-muted-foreground">{offer.message}</p>}
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="font-display text-lg font-bold">${offer.price.toLocaleString()}</div>
-                          <div className="mt-1 flex gap-1.5">
-                            {/* Customer can accept offers */}
-                            {(role === "user" || role === "company") && (
-                              <Button size="sm" variant="hero" className="gap-1" onClick={() => toast.success(`Accepted offer from ${offer.workerName} (demo)`)}>
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Accept
-                              </Button>
-                            )}
-                            {/* Admin can remove offers */}
-                            {role === "admin" && (
-                              <Button size="sm" variant="destructive" className="gap-1" onClick={() => toast.success(`Offer removed (demo)`)}>
-                                <Trash2 className="h-3.5 w-3.5" /> Remove
-                              </Button>
-                            )}
-                            {/* Everyone can message */}
-                            {role && (
-                              <Button size="sm" variant="ghost" onClick={() => toast.info("Chat coming soon!")}>
+                          <div className="text-right shrink-0">
+                            <div className="font-display text-lg font-bold">₸{offer.price.toLocaleString()}</div>
+                            <div className="mt-1 flex gap-1.5">
+                              {isOwner && offer.status === "pending" && (
+                                <Button size="sm" variant="hero" className="gap-1" onClick={async () => {
+                                  await supabase.from("offers").update({ status: "accepted" }).eq("id", offer.id);
+                                  setOffers((prev) => prev.map((o) => o.id === offer.id ? { ...o, status: "accepted" } : o));
+                                  toast.success("Offer accepted!");
+                                }}>
+                                  <CheckCircle2 className="h-3.5 w-3.5" /> Accept
+                                </Button>
+                              )}
+                              {offer.status === "accepted" && (
+                                <Badge variant="status" className="bg-primary/10 text-primary">Accepted</Badge>
+                              )}
+                              <Button size="sm" variant="ghost" onClick={() => openChat(offer)}>
                                 <MessageSquare className="h-3.5 w-3.5" />
                               </Button>
-                            )}
-                            {/* No role: prompt */}
-                            {!role && (
-                              <Button size="sm" variant="outline" onClick={() => toast.info("Select a role via Quick Access to interact")}>
-                                Accept
-                              </Button>
-                            )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-4">
             <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="text-lg">Budget</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">Budget</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-1 font-display text-3xl font-bold">
                   <DollarSign className="h-6 w-6" />
-                  {request.price.toLocaleString()}
+                  {request.budget ? Number(request.budget).toLocaleString() : "Negotiable"}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">Initial customer price</p>
               </CardContent>
             </Card>
 
             <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="text-lg">Posted By</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">Posted By</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                     <User className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="font-semibold">Anonymous User</p>
+                    <p className="font-semibold">{isOwner ? "You" : "Customer"}</p>
                     <p className="text-xs text-muted-foreground">Contact after assignment</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Sidebar role-specific CTA */}
-            {(role === "worker" || role === "company") && !showOfferForm && (
+            {canMakeOffer && !alreadyOffered && !showOfferForm && (
               <Button variant="hero" className="w-full gap-2" onClick={() => setShowOfferForm(true)}>
-                {role === "company" ? <Building2 className="h-4 w-4" /> : <HardHat className="h-4 w-4" />} Submit My Offer
+                <HardHat className="h-4 w-4" /> Make an Offer
               </Button>
             )}
 
-            {(role === "user" || role === "company") && (
-              <Button variant="outline" className="w-full gap-2" onClick={() => toast.info("Chat coming soon!")}>
-                <MessageSquare className="h-4 w-4" /> Message Workers
+            {canMakeOffer && alreadyOffered && (
+              <Button variant="outline" className="w-full gap-2" disabled>
+                <CheckCircle2 className="h-4 w-4" /> Offer Submitted
               </Button>
             )}
 
-            {role === "admin" && (
-              <Button variant="destructive" className="w-full gap-2" onClick={() => toast.success("Request deleted (demo)")}>
-                <Trash2 className="h-4 w-4" /> Delete Request
-              </Button>
-            )}
-
-            {!role && (
-              <Button variant="hero" className="w-full gap-2" onClick={() => toast.info("Select a role via Quick Access to make an offer")}>
-                <MessageSquare className="h-4 w-4" /> Make an Offer
-              </Button>
+            {!user && (
+              <Link to="/login">
+                <Button variant="hero" className="w-full gap-2">
+                  <MessageSquare className="h-4 w-4" /> Log in to Make an Offer
+                </Button>
+              </Link>
             )}
           </div>
         </div>
       </div>
+
+      {/* Chat Dialog */}
+      <Dialog open={!!chatOfferId} onOpenChange={(open) => !open && setChatOfferId(null)}>
+        <DialogContent className="p-0 max-w-md">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Chat</DialogTitle>
+          </DialogHeader>
+          {chatOfferId && <OfferChat offerId={chatOfferId} otherUserName={chatOtherName} />}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
