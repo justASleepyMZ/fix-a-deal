@@ -1,20 +1,59 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ServiceRequestCard from "@/components/ServiceRequestCard";
-import { mockRequests, categories } from "@/data/mockData";
+import { categories } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, HardHat, ShieldCheck, Building2 } from "lucide-react";
-import { useState } from "react";
+import { Search, Plus, HardHat, ShieldCheck, Building2, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
+import type { ServiceRequestData } from "@/components/ServiceRequestCard";
 import { toast } from "sonner";
 
 const Requests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const { role } = useRole();
+  const { effectiveRole } = useRole();
+  const { user } = useAuth();
+  const [requests, setRequests] = useState<ServiceRequestData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = mockRequests.filter((r) => {
+  useEffect(() => {
+    const fetchRequests = async () => {
+      const { data, error } = await supabase
+        .from("service_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        setLoading(false);
+        return;
+      }
+
+      const mapped: ServiceRequestData[] = (data || []).map((r) => ({
+        id: r.id,
+        title: r.title,
+        category: r.category,
+        description: r.description,
+        city: r.city || "",
+        district: r.district || "",
+        price: Number(r.budget) || 0,
+        status: r.status.charAt(0).toUpperCase() + r.status.slice(1).replace("_", " "),
+        createdAt: new Date(r.created_at).toLocaleDateString(),
+        offersCount: 0,
+        imageUrl: r.photos && r.photos.length > 0 ? r.photos[0] : undefined,
+      }));
+      setRequests(mapped);
+      setLoading(false);
+    };
+    fetchRequests();
+  }, []);
+
+  const filtered = requests.filter((r) => {
     const matchesSearch =
       !searchQuery ||
       r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -35,44 +74,32 @@ const Requests = () => {
           </div>
 
           <div className="flex gap-2">
-            {/* Customer: Post new request */}
-            {role === "user" && (
-              <Button variant="hero" onClick={() => toast.success("Create Request form coming soon!")}>
-                <Plus className="mr-1.5 h-4 w-4" /> Post a Request
-              </Button>
+            {(effectiveRole === "user" || effectiveRole === "company") && user && (
+              <Link to="/requests/new">
+                <Button variant="hero">
+                  <Plus className="mr-1.5 h-4 w-4" /> Post a Request
+                </Button>
+              </Link>
             )}
 
-            {/* Worker: indicator */}
-            {role === "worker" && (
+            {effectiveRole === "worker" && (
               <Button variant="outline" className="pointer-events-none gap-1.5">
                 <HardHat className="h-4 w-4" /> Browse &amp; submit offers below
               </Button>
             )}
 
-            {/* Company: can post and take requests */}
-            {role === "company" && (
-              <div className="flex gap-2">
-                <Button variant="hero" onClick={() => toast.success("Create Request form coming soon!")}>
-                  <Plus className="mr-1.5 h-4 w-4" /> Post a Request
-                </Button>
-                <Button variant="outline" className="gap-1.5">
-                  <Building2 className="h-4 w-4" /> Can also submit offers
-                </Button>
-              </div>
-            )}
-
-            {/* Admin: moderation hint */}
-            {role === "admin" && (
+            {effectiveRole === "admin" && (
               <Button variant="outline" className="pointer-events-none gap-1.5">
                 <ShieldCheck className="h-4 w-4" /> Moderation mode active
               </Button>
             )}
 
-            {/* Not logged in */}
-            {!role && (
-              <Button variant="hero" onClick={() => toast.info("Select a role via Quick Access or sign up to post requests.")}>
-                <Plus className="mr-1.5 h-4 w-4" /> Post a Request
-              </Button>
+            {!effectiveRole && (
+              <Link to="/login">
+                <Button variant="hero">
+                  <Plus className="mr-1.5 h-4 w-4" /> Post a Request
+                </Button>
+              </Link>
             )}
           </div>
         </div>
@@ -110,13 +137,19 @@ const Requests = () => {
         </div>
 
         {/* Listing grid */}
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((req) => (
-            <ServiceRequestCard key={req.id} request={req} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((req) => (
+              <ServiceRequestCard key={req.id} request={req} />
+            ))}
+          </div>
+        )}
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="py-20 text-center text-muted-foreground">
             <p className="text-lg font-medium">No requests found</p>
             <p className="mt-1 text-sm">Try adjusting your search or filters</p>

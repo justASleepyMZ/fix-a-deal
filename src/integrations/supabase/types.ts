@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          offer_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          offer_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          offer_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_profiles: {
         Row: {
           company_address: string | null
@@ -50,6 +82,47 @@ export type Database = {
         }
         Relationships: []
       }
+      offers: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          price: number
+          request_id: string
+          status: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          price: number
+          request_id: string
+          status?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          price?: number
+          request_id?: string
+          status?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -75,6 +148,54 @@ export type Database = {
           display_name?: string | null
           id?: string
           phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      service_requests: {
+        Row: {
+          address: string | null
+          budget: number | null
+          category: string
+          city: string | null
+          created_at: string
+          description: string
+          district: string | null
+          id: string
+          photos: string[] | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          budget?: number | null
+          category?: string
+          city?: string | null
+          created_at?: string
+          description: string
+          district?: string | null
+          id?: string
+          photos?: string[] | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          budget?: number | null
+          category?: string
+          city?: string | null
+          created_at?: string
+          description?: string
+          district?: string | null
+          id?: string
+          photos?: string[] | null
+          status?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }

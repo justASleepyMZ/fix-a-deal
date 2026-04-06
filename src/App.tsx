@@ -11,6 +11,7 @@ import RequestDetail from "./pages/RequestDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
+import CreateRequest from "./pages/CreateRequest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/requests" element={<Requests />} />
+              <Route path="/requests/new" element={<CreateRequest />} />
               <Route path="/requests/:id" element={<RequestDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
