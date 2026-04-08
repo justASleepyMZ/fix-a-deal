@@ -182,12 +182,12 @@ const Requests = () => {
               {/* Category */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Category</Label>
-                <Select value={selectedCategory || ""} onValueChange={(v) => setSelectedCategory(v || null)}>
+                <Select value={selectedCategory || "__all__"} onValueChange={(v) => setSelectedCategory(v === "__all__" ? null : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All categories</SelectItem>
+                    <SelectItem value="__all__">All categories</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat.name} value={cat.name}>
                         {cat.icon} {cat.name}
@@ -200,12 +200,12 @@ const Requests = () => {
               {/* City */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">City</Label>
-                <Select value={selectedCity || ""} onValueChange={(v) => setSelectedCity(v || null)}>
+                <Select value={selectedCity || "__all__"} onValueChange={(v) => setSelectedCity(v === "__all__" ? null : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All cities" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All cities</SelectItem>
+                    <SelectItem value="__all__">All cities</SelectItem>
                     {cities.map((city) => (
                       <SelectItem key={city} value={city}>{city}</SelectItem>
                     ))}
