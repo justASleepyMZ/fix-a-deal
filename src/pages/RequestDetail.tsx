@@ -11,13 +11,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, Link } from "react-router-dom";
 import {
   MapPin, Clock, DollarSign, ArrowLeft, MessageSquare, User,
-  HardHat, Send, CheckCircle2, Building2, Loader2
+  HardHat, Send, CheckCircle2, Building2, Loader2, Star
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import OfferChat from "@/components/OfferChat";
+import StarRating from "@/components/StarRating";
 
 interface ServiceRequest {
   id: string;
@@ -42,6 +43,7 @@ interface Offer {
   status: string;
   created_at: string;
   worker_name?: string;
+  worker_avg_rating?: number;
 }
 
 const RequestDetail = () => {
@@ -59,6 +61,14 @@ const RequestDetail = () => {
   const [chatOfferId, setChatOfferId] = useState<string | null>(null);
   const [chatOtherName, setChatOtherName] = useState("User");
 
+  // Rating state: customer rates worker
+  const [ratingWorkerMap, setRatingWorkerMap] = useState<Record<string, number>>({}); // workerId -> existing rating
+  const [pendingRating, setPendingRating] = useState<Record<string, number>>({}); // workerId -> pending rating
+  const [submittingRating, setSubmittingRating] = useState<string | null>(null);
+
+  // Rating state: worker sees customer rating of request owner
+  const [ownerAvgRating, setOwnerAvgRating] = useState<number>(0);
+
   useEffect(() => {
     if (!id) return;
 
@@ -75,7 +85,18 @@ const RequestDetail = () => {
       }
       setRequest(data as ServiceRequest);
 
-      // Fetch offers if user is the request owner or has made an offer
+      // Fetch owner average rating
+      const { data: ownerRatings } = await supabase
+        .from("ratings")
+        .select("rating")
+        .eq("rated_user_id", data.user_id);
+
+      if (ownerRatings && ownerRatings.length > 0) {
+        const avg = ownerRatings.reduce((s, r) => s + r.rating, 0) / ownerRatings.length;
+        setOwnerAvgRating(avg);
+      }
+
+      // Fetch offers
       if (user) {
         const { data: offersData } = await supabase
           .from("offers")
@@ -83,24 +104,45 @@ const RequestDetail = () => {
           .eq("request_id", id)
           .order("created_at", { ascending: true });
 
-        if (offersData) {
-          // Fetch worker display names
+        if (offersData && offersData.length > 0) {
           const workerIds = offersData.map((o) => o.worker_id);
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("user_id, display_name")
-            .in("user_id", workerIds);
+
+          // Fetch profiles + avg ratings for workers in parallel
+          const [profilesRes, ratingsRes, existingRatingsRes] = await Promise.all([
+            supabase.from("profiles").select("user_id, display_name").in("user_id", workerIds),
+            supabase.from("ratings").select("rated_user_id, rating").in("rated_user_id", workerIds),
+            // Fetch ratings the current user already gave to workers on this request
+            supabase.from("ratings").select("rated_user_id, rating").eq("rated_by_user_id", user.id).eq("request_id", id),
+          ]);
 
           const profileMap: Record<string, string> = {};
-          profiles?.forEach((p) => {
+          profilesRes.data?.forEach((p) => {
             profileMap[p.user_id] = p.display_name || "Worker";
           });
+
+          // Compute avg rating per worker
+          const ratingAcc: Record<string, { sum: number; count: number }> = {};
+          ratingsRes.data?.forEach((r) => {
+            if (!ratingAcc[r.rated_user_id]) ratingAcc[r.rated_user_id] = { sum: 0, count: 0 };
+            ratingAcc[r.rated_user_id].sum += r.rating;
+            ratingAcc[r.rated_user_id].count += 1;
+          });
+
+          // Existing ratings by current user
+          const existingMap: Record<string, number> = {};
+          existingRatingsRes.data?.forEach((r) => {
+            existingMap[r.rated_user_id] = r.rating;
+          });
+          setRatingWorkerMap(existingMap);
 
           setOffers(
             offersData.map((o) => ({
               ...o,
               price: Number(o.price),
               worker_name: profileMap[o.worker_id] || "Worker",
+              worker_avg_rating: ratingAcc[o.worker_id]
+                ? ratingAcc[o.worker_id].sum / ratingAcc[o.worker_id].count
+                : 0,
             }))
           );
         }
@@ -135,15 +177,60 @@ const RequestDetail = () => {
       toast.error(error.message);
     } else {
       toast.success("Offer submitted!");
-      setOffers((prev) => [...prev, { ...data, price: Number(data.price), worker_name: "You" }]);
+      setOffers((prev) => [...prev, { ...data, price: Number(data.price), worker_name: "You", worker_avg_rating: 0 }]);
       setShowOfferForm(false);
       setOfferPrice("");
       setOfferMessage("");
-      // Auto-open chat
       setChatOfferId(data.id);
       setChatOtherName("Request Owner");
     }
     setSubmittingOffer(false);
+  };
+
+  const handleRateWorker = async (workerId: string) => {
+    if (!user || !id) return;
+    const rating = pendingRating[workerId];
+    if (!rating) return;
+
+    setSubmittingRating(workerId);
+
+    const existing = ratingWorkerMap[workerId];
+    let error;
+
+    if (existing) {
+      // Update
+      const res = await supabase
+        .from("ratings")
+        .update({ rating })
+        .eq("rated_user_id", workerId)
+        .eq("rated_by_user_id", user.id)
+        .eq("request_id", id);
+      error = res.error;
+    } else {
+      // Insert
+      const res = await supabase
+        .from("ratings")
+        .insert({
+          rated_user_id: workerId,
+          rated_by_user_id: user.id,
+          request_id: id,
+          rating,
+        });
+      error = res.error;
+    }
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Rating submitted!");
+      setRatingWorkerMap((prev) => ({ ...prev, [workerId]: rating }));
+      setPendingRating((prev) => {
+        const next = { ...prev };
+        delete next[workerId];
+        return next;
+      });
+    }
+    setSubmittingRating(null);
   };
 
   const openChat = (offer: Offer) => {
@@ -266,8 +353,40 @@ const RequestDetail = () => {
                               {(offer.worker_name || "W")[0]}
                             </div>
                             <div>
-                              <span className="font-semibold">{offer.worker_name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">{offer.worker_name}</span>
+                                {(offer.worker_avg_rating ?? 0) > 0 && (
+                                  <StarRating rating={offer.worker_avg_rating!} size="sm" showValue />
+                                )}
+                              </div>
                               {offer.message && <p className="mt-1 text-sm text-muted-foreground">{offer.message}</p>}
+
+                              {/* Customer rates worker — only on accepted offers */}
+                              {isOwner && offer.status === "accepted" && (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Rate worker:</span>
+                                  <StarRating
+                                    rating={pendingRating[offer.worker_id] ?? ratingWorkerMap[offer.worker_id] ?? 0}
+                                    size="md"
+                                    interactive
+                                    onChange={(r) => setPendingRating((prev) => ({ ...prev, [offer.worker_id]: r }))}
+                                  />
+                                  {pendingRating[offer.worker_id] && pendingRating[offer.worker_id] !== ratingWorkerMap[offer.worker_id] && (
+                                    <Button
+                                      size="sm"
+                                      variant="hero"
+                                      className="h-7 px-2 text-xs"
+                                      disabled={submittingRating === offer.worker_id}
+                                      onClick={() => handleRateWorker(offer.worker_id)}
+                                    >
+                                      {submittingRating === offer.worker_id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                                    </Button>
+                                  )}
+                                  {ratingWorkerMap[offer.worker_id] && !pendingRating[offer.worker_id] && (
+                                    <span className="text-xs text-primary font-medium">✓ Rated</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="text-right shrink-0">
@@ -321,6 +440,9 @@ const RequestDetail = () => {
                   </div>
                   <div>
                     <p className="font-semibold">{isOwner ? "You" : "Customer"}</p>
+                    {ownerAvgRating > 0 && (
+                      <StarRating rating={ownerAvgRating} size="sm" showValue />
+                    )}
                     <p className="text-xs text-muted-foreground">Contact after assignment</p>
                   </div>
                 </div>
