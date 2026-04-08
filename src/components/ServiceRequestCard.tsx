@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
+import StarRating from "@/components/StarRating";
 
 export interface ServiceRequestData {
   id: string;
@@ -14,6 +15,7 @@ export interface ServiceRequestData {
   createdAt: string;
   offersCount: number;
   imageUrl?: string;
+  posterRating?: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -75,9 +77,14 @@ const ServiceRequestCard = ({ request }: { request: ServiceRequestData }) => {
             <DollarSign className="h-4 w-4" />
             {request.price.toLocaleString()}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {request.offersCount} offer{request.offersCount !== 1 ? "s" : ""}
-          </span>
+          <div className="flex items-center gap-2">
+            {request.posterRating !== undefined && request.posterRating > 0 && (
+              <StarRating rating={request.posterRating} size="sm" showValue />
+            )}
+            <span className="text-xs text-muted-foreground">
+              {request.offersCount} offer{request.offersCount !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
       </div>
     </Link>

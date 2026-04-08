@@ -4,22 +4,29 @@ import ServiceRequestCard from "@/components/ServiceRequestCard";
 import { categories } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, HardHat, ShieldCheck, Building2, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import StarRating from "@/components/StarRating";
+import { Search, Plus, HardHat, ShieldCheck, SlidersHorizontal, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import type { ServiceRequestData } from "@/components/ServiceRequestCard";
-import { toast } from "sonner";
 
 const Requests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [minRating, setMinRating] = useState(0);
   const { effectiveRole } = useRole();
   const { user } = useAuth();
   const [requests, setRequests] = useState<ServiceRequestData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cities, setCities] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -34,24 +41,50 @@ const Requests = () => {
         return;
       }
 
-      const mapped: ServiceRequestData[] = (data || []).map((r) => ({
-        id: r.id,
-        title: r.title,
-        category: r.category,
-        description: r.description,
-        city: r.city || "",
-        district: r.district || "",
-        price: Number(r.budget) || 0,
-        status: r.status.charAt(0).toUpperCase() + r.status.slice(1).replace("_", " "),
-        createdAt: new Date(r.created_at).toLocaleDateString(),
-        offersCount: 0,
-        imageUrl: r.photos && r.photos.length > 0 ? r.photos[0] : undefined,
-      }));
+      // Extract unique cities
+      const uniqueCities = [...new Set((data || []).map((r) => r.city).filter(Boolean))] as string[];
+      setCities(uniqueCities);
+
+      // Fetch poster average ratings
+      const userIds = [...new Set((data || []).map((r) => r.user_id))];
+      const { data: ratingsData } = await supabase
+        .from("ratings")
+        .select("rated_user_id, rating")
+        .in("rated_user_id", userIds);
+
+      const ratingMap: Record<string, { sum: number; count: number }> = {};
+      ratingsData?.forEach((r) => {
+        if (!ratingMap[r.rated_user_id]) ratingMap[r.rated_user_id] = { sum: 0, count: 0 };
+        ratingMap[r.rated_user_id].sum += r.rating;
+        ratingMap[r.rated_user_id].count += 1;
+      });
+
+      const mapped: ServiceRequestData[] = (data || []).map((r) => {
+        const avg = ratingMap[r.user_id]
+          ? ratingMap[r.user_id].sum / ratingMap[r.user_id].count
+          : 0;
+        return {
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          description: r.description,
+          city: r.city || "",
+          district: r.district || "",
+          price: Number(r.budget) || 0,
+          status: r.status.charAt(0).toUpperCase() + r.status.slice(1).replace("_", " "),
+          createdAt: new Date(r.created_at).toLocaleDateString(),
+          offersCount: 0,
+          imageUrl: r.photos && r.photos.length > 0 ? r.photos[0] : undefined,
+          posterRating: avg,
+        };
+      });
       setRequests(mapped);
       setLoading(false);
     };
     fetchRequests();
   }, []);
+
+  const activeFilterCount = [selectedCategory, selectedCity, minRating > 0].filter(Boolean).length;
 
   const filtered = requests.filter((r) => {
     const matchesSearch =
@@ -59,8 +92,16 @@ const Requests = () => {
       r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || r.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesCity = !selectedCity || r.city === selectedCity;
+    const matchesRating = minRating === 0 || (r.posterRating ?? 0) >= minRating;
+    return matchesSearch && matchesCategory && matchesCity && matchesRating;
   });
+
+  const clearFilters = () => {
+    setSelectedCategory(null);
+    setSelectedCity(null);
+    setMinRating(0);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-surface">
@@ -104,8 +145,8 @@ const Requests = () => {
           </div>
         </div>
 
-        {/* Search & Filters */}
-        <div className="mt-6 flex flex-col gap-3 md:flex-row">
+        {/* Search & Filter Button */}
+        <div className="mt-6 flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -115,25 +156,80 @@ const Requests = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            <Button
-              variant={selectedCategory === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(null)}
-            >
-              All
-            </Button>
-            {categories.slice(0, 6).map((cat) => (
-              <Button
-                key={cat.name}
-                variant={selectedCategory === cat.name ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(cat.name === selectedCategory ? null : cat.name)}
-              >
-                {cat.icon} {cat.name}
+
+          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="relative gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden sm:inline">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    {activeFilterCount}
+                  </span>
+                )}
               </Button>
-            ))}
-          </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 space-y-4" align="end">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display font-semibold">Filters</h3>
+                {activeFilterCount > 0 && (
+                  <Button variant="ghost" size="sm" className="h-auto gap-1 px-2 py-1 text-xs" onClick={clearFilters}>
+                    <X className="h-3 w-3" /> Clear all
+                  </Button>
+                )}
+              </div>
+
+              {/* Category */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Category</Label>
+                <Select value={selectedCategory || ""} onValueChange={(v) => setSelectedCategory(v || null)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All categories</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.name} value={cat.name}>
+                        {cat.icon} {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* City */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">City</Label>
+                <Select value={selectedCity || ""} onValueChange={(v) => setSelectedCity(v || null)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All cities</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Min Rating */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Minimum Poster Rating</Label>
+                <StarRating
+                  rating={minRating}
+                  size="md"
+                  interactive
+                  onChange={(r) => setMinRating(r === minRating ? 0 : r)}
+                  showValue
+                />
+              </div>
+
+              <Button variant="hero" className="w-full" onClick={() => setFiltersOpen(false)}>
+                Apply Filters
+              </Button>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Listing grid */}
