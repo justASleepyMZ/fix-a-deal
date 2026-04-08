@@ -153,6 +153,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ratings: {
+        Row: {
+          created_at: string
+          id: string
+          rated_by_user_id: string
+          rated_user_id: string
+          rating: number
+          request_id: string
+          review: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rated_by_user_id: string
+          rated_user_id: string
+          rating: number
+          request_id: string
+          review?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rated_by_user_id?: string
+          rated_user_id?: string
+          rating?: number
+          request_id?: string
+          review?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_requests: {
         Row: {
           address: string | null
