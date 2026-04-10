@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import StarRating from "@/components/StarRating";
-import { Search, Plus, HardHat, ShieldCheck, SlidersHorizontal, Loader2, X } from "lucide-react";
+import { Search, Plus, HardHat, ShieldCheck, SlidersHorizontal, Loader2, X, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,10 +16,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import type { ServiceRequestData } from "@/components/ServiceRequestCard";
 
+const KAZAKHSTAN_CITIES = [
+  "Astana", "Almaty", "Shymkent", "Karaganda", "Aktobe",
+  "Taraz", "Pavlodar", "Ust-Kamenogorsk", "Semey", "Atyrau",
+  "Kostanay", "Kyzylorda", "Oral", "Petropavl", "Aktau",
+  "Temirtau", "Turkestan", "Taldykorgan", "Ekibastuz", "Rudny",
+];
+
 const Requests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [priorityCity, setPriorityCity] = useState<string | null>(null);
+  const [cityChosen, setCityChosen] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const { effectiveRole } = useRole();
   const { user } = useAuth();
@@ -97,11 +106,70 @@ const Requests = () => {
     return matchesSearch && matchesCategory && matchesCity && matchesRating;
   });
 
+  // Sort by priority city: matching city first, then the rest
+  const sorted = priorityCity
+    ? [...filtered].sort((a, b) => {
+        const aMatch = a.city.toLowerCase() === priorityCity.toLowerCase() ? 0 : 1;
+        const bMatch = b.city.toLowerCase() === priorityCity.toLowerCase() ? 0 : 1;
+        return aMatch - bMatch;
+      })
+    : filtered;
+
   const clearFilters = () => {
     setSelectedCategory(null);
     setSelectedCity(null);
     setMinRating(0);
   };
+
+  const handleCitySelect = (city: string) => {
+    setPriorityCity(city);
+    setCityChosen(true);
+  };
+
+  const handleSkipCity = () => {
+    setPriorityCity(null);
+    setCityChosen(true);
+  };
+
+  // City picker overlay
+  if (!cityChosen && !loading) {
+    return (
+      <div className="min-h-screen bg-gradient-surface">
+        <Navbar />
+        <div className="container py-12">
+          <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-8 shadow-lg">
+            <div className="mb-6 flex flex-col items-center gap-3 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <MapPin className="h-7 w-7 text-primary" />
+              </div>
+              <h2 className="font-display text-2xl font-bold">Select your city</h2>
+              <p className="text-muted-foreground">
+                Choose a city to see nearby requests first
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {KAZAKHSTAN_CITIES.map((city) => (
+                <Button
+                  key={city}
+                  variant={priorityCity === city ? "default" : "outline"}
+                  className="h-auto py-2.5 text-sm"
+                  onClick={() => handleCitySelect(city)}
+                >
+                  {city}
+                </Button>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-center">
+              <Button variant="ghost" onClick={handleSkipCity} className="text-muted-foreground">
+                Skip — show all requests
+              </Button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-surface">
@@ -111,7 +179,17 @@ const Requests = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold md:text-3xl">Service Requests</h1>
-            <p className="mt-1 text-muted-foreground">{filtered.length} active requests</p>
+            <p className="mt-1 text-muted-foreground">
+              {sorted.length} active requests
+              {priorityCity && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  <MapPin className="h-3 w-3" /> {priorityCity}
+                  <button onClick={() => { setPriorityCity(null); setCityChosen(false); }} className="ml-1 hover:text-primary/70">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </p>
           </div>
 
           <div className="flex gap-2">
@@ -239,13 +317,13 @@ const Requests = () => {
           </div>
         ) : (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((req) => (
+            {sorted.map((req) => (
               <ServiceRequestCard key={req.id} request={req} />
             ))}
           </div>
         )}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && sorted.length === 0 && (
           <div className="py-20 text-center text-muted-foreground">
             <p className="text-lg font-medium">No requests found</p>
             <p className="mt-1 text-sm">Try adjusting your search or filters</p>
