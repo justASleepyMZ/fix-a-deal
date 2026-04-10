@@ -361,6 +361,33 @@ const RequestDetail = () => {
                               </div>
                               {offer.message && <p className="mt-1 text-sm text-muted-foreground">{offer.message}</p>}
 
+                              {/* Worker rates customer — only on accepted offers */}
+                              {!isOwner && offer.worker_id === user?.id && offer.status === "accepted" && (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Rate customer:</span>
+                                  <StarRating
+                                    rating={pendingRating[request.user_id] ?? ratingWorkerMap[request.user_id] ?? 0}
+                                    size="md"
+                                    interactive
+                                    onChange={(r) => setPendingRating((prev) => ({ ...prev, [request.user_id]: r }))}
+                                  />
+                                  {pendingRating[request.user_id] && pendingRating[request.user_id] !== ratingWorkerMap[request.user_id] && (
+                                    <Button
+                                      size="sm"
+                                      variant="hero"
+                                      className="h-7 px-2 text-xs"
+                                      disabled={submittingRating === request.user_id}
+                                      onClick={() => handleRateWorker(request.user_id)}
+                                    >
+                                      {submittingRating === request.user_id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                                    </Button>
+                                  )}
+                                  {ratingWorkerMap[request.user_id] && !pendingRating[request.user_id] && (
+                                    <span className="text-xs text-primary font-medium">✓ Rated</span>
+                                  )}
+                                </div>
+                              )}
+
                               {/* Customer rates worker — only on accepted offers */}
                               {isOwner && offer.status === "accepted" && (
                                 <div className="mt-2 flex items-center gap-2">
