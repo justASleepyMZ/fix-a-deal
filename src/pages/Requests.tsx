@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import StarRating from "@/components/StarRating";
-import { Search, Plus, HardHat, ShieldCheck, SlidersHorizontal, Loader2, X } from "lucide-react";
+import { Search, Plus, HardHat, ShieldCheck, SlidersHorizontal, Loader2, X, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,10 +16,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import type { ServiceRequestData } from "@/components/ServiceRequestCard";
 
+const KAZAKHSTAN_CITIES = [
+  "Astana", "Almaty", "Shymkent", "Karaganda", "Aktobe",
+  "Taraz", "Pavlodar", "Ust-Kamenogorsk", "Semey", "Atyrau",
+  "Kostanay", "Kyzylorda", "Oral", "Petropavl", "Aktau",
+  "Temirtau", "Turkestan", "Taldykorgan", "Ekibastuz", "Rudny",
+];
+
 const Requests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [priorityCity, setPriorityCity] = useState<string | null>(null);
+  const [cityChosen, setCityChosen] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const { effectiveRole } = useRole();
   const { user } = useAuth();
