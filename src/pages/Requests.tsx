@@ -106,10 +106,29 @@ const Requests = () => {
     return matchesSearch && matchesCategory && matchesCity && matchesRating;
   });
 
+  // Sort by priority city: matching city first, then the rest
+  const sorted = priorityCity
+    ? [...filtered].sort((a, b) => {
+        const aMatch = a.city.toLowerCase() === priorityCity.toLowerCase() ? 0 : 1;
+        const bMatch = b.city.toLowerCase() === priorityCity.toLowerCase() ? 0 : 1;
+        return aMatch - bMatch;
+      })
+    : filtered;
+
   const clearFilters = () => {
     setSelectedCategory(null);
     setSelectedCity(null);
     setMinRating(0);
+  };
+
+  const handleCitySelect = (city: string) => {
+    setPriorityCity(city);
+    setCityChosen(true);
+  };
+
+  const handleSkipCity = () => {
+    setPriorityCity(null);
+    setCityChosen(true);
   };
 
   return (
