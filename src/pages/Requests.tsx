@@ -197,9 +197,9 @@ const Requests = () => {
               {priorityCity && (
                 <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                   <MapPin className="h-3 w-3" /> {priorityCity}
-                  <button onClick={() => { setPriorityCity(null); setCityChosen(false); }} className="ml-1 hover:text-primary/70">
-                    <X className="h-3 w-3" />
-                  </button>
+                   <button onClick={handleChangeCity} className="ml-1 hover:text-primary/70">
+                     <X className="h-3 w-3" />
+                   </button>
                 </span>
               )}
             </p>
