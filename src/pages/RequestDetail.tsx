@@ -33,6 +33,8 @@ interface ServiceRequest {
   status: string;
   photos: string[];
   created_at: string;
+  desired_start_date: string | null;
+  desired_end_date: string | null;
 }
 
 interface Offer {

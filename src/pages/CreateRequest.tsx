@@ -188,6 +188,35 @@ const CreateRequest = () => {
               <Input id="budget" type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Your expected price" />
             </div>
 
+            <div className="space-y-2">
+              <Label>Desired Time Range</Label>
+              <p className="text-xs text-muted-foreground">When should the work be done?</p>
+              <div className="grid grid-cols-2 gap-4">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "PPP") : "Start date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} initialFocus className={cn("p-3 pointer-events-auto")} />
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "PPP") : "End date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} disabled={(d) => d < (startDate || new Date(new Date().setHours(0,0,0,0)))} initialFocus className={cn("p-3 pointer-events-auto")} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2" variant="hero">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {submitting ? "Posting..." : "Post Request"}
