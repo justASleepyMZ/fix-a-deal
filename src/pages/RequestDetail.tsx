@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, Link } from "react-router-dom";
 import {
   MapPin, Clock, DollarSign, ArrowLeft, MessageSquare, User,
-  HardHat, Send, CheckCircle2, Building2, Loader2, Star
+  HardHat, Send, CheckCircle2, Building2, Loader2, Star, CalendarIcon
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -311,6 +311,17 @@ const RequestDetail = () => {
               <p className="mt-4 text-muted-foreground leading-relaxed">{request.description}</p>
               {request.address && (
                 <p className="mt-2 text-sm text-muted-foreground"><MapPin className="inline h-3.5 w-3.5 mr-1" />Address: {request.address}</p>
+              )}
+              {(request.desired_start_date || request.desired_end_date) && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-sm">
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-foreground">Desired period:</span>
+                  <span className="text-muted-foreground">
+                    {request.desired_start_date ? new Date(request.desired_start_date).toLocaleDateString() : "—"}
+                    {" → "}
+                    {request.desired_end_date ? new Date(request.desired_end_date).toLocaleDateString() : "—"}
+                  </span>
+                </div>
               )}
             </div>
 
