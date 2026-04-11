@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock, DollarSign } from "lucide-react";
+import { MapPin, Clock, DollarSign, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
 import StarRating from "@/components/StarRating";
 
@@ -16,6 +16,8 @@ export interface ServiceRequestData {
   offersCount: number;
   imageUrl?: string;
   posterRating?: number;
+  desiredStartDate?: string;
+  desiredEndDate?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -61,7 +63,7 @@ const ServiceRequestCard = ({ request }: { request: ServiceRequestData }) => {
 
         <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">{request.description}</p>
 
-        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5" />
             {request.city}, {request.district}
@@ -70,6 +72,12 @@ const ServiceRequestCard = ({ request }: { request: ServiceRequestData }) => {
             <Clock className="h-3.5 w-3.5" />
             {request.createdAt}
           </span>
+          {request.desiredStartDate && (
+            <span className="flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5" />
+              {new Date(request.desiredStartDate).toLocaleDateString()} – {request.desiredEndDate ? new Date(request.desiredEndDate).toLocaleDateString() : "…"}
+            </span>
+          )}
         </div>
 
         <div className="mt-3 flex items-center justify-between border-t pt-3">
