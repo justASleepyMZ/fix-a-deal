@@ -88,8 +88,10 @@ const Requests = () => {
           offersCount: 0,
           imageUrl: r.photos && r.photos.length > 0 ? r.photos[0] : undefined,
           posterRating: avg,
+          desiredStartDate: r.desired_start_date ?? undefined,
+          desiredEndDate: r.desired_end_date ?? undefined,
         };
-      });
+      }).filter((r) => r.status.toLowerCase() === "open");
       setRequests(mapped);
       setLoading(false);
     };
