@@ -10,10 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ImagePlus, Loader2, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { ArrowLeft, ImagePlus, Loader2, X, CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { categories } from "@/data/mockData";
 import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const CreateRequest = () => {
   const { user, loading: authLoading } = useAuth();
@@ -30,6 +34,8 @@ const CreateRequest = () => {
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
 
   const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -84,6 +90,8 @@ const CreateRequest = () => {
           address: address.trim() || null,
           budget: budget ? parseFloat(budget) : null,
           photos: photoUrls,
+          desired_start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+          desired_end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
         })
         .select("id")
         .single();
