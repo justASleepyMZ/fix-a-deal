@@ -202,6 +202,11 @@ const Requests = () => {
                    </button>
                 </span>
               )}
+              {!priorityCity && (
+                <button onClick={handleChangeCity} className="ml-2 text-xs text-primary hover:underline">
+                  <MapPin className="mr-0.5 inline h-3 w-3" />Select city
+                </button>
+              )}
             </p>
           </div>
 
