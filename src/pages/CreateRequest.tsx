@@ -10,10 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ImagePlus, Loader2, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { ArrowLeft, ImagePlus, Loader2, X, CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { categories } from "@/data/mockData";
 import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const CreateRequest = () => {
   const { user, loading: authLoading } = useAuth();
@@ -30,6 +34,8 @@ const CreateRequest = () => {
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
 
   const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -84,6 +90,8 @@ const CreateRequest = () => {
           address: address.trim() || null,
           budget: budget ? parseFloat(budget) : null,
           photos: photoUrls,
+          desired_start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+          desired_end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
         })
         .select("id")
         .single();
@@ -178,6 +186,35 @@ const CreateRequest = () => {
             <div className="space-y-2">
               <Label htmlFor="budget">Budget (₸)</Label>
               <Input id="budget" type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Your expected price" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Desired Time Range</Label>
+              <p className="text-xs text-muted-foreground">When should the work be done?</p>
+              <div className="grid grid-cols-2 gap-4">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "PPP") : "Start date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} initialFocus className={cn("p-3 pointer-events-auto")} />
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "PPP") : "End date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} disabled={(d) => d < (startDate || new Date(new Date().setHours(0,0,0,0)))} initialFocus className={cn("p-3 pointer-events-auto")} />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2" variant="hero">
