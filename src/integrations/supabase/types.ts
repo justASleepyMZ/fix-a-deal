@@ -194,6 +194,8 @@ export type Database = {
           city: string | null
           created_at: string
           description: string
+          desired_end_date: string | null
+          desired_start_date: string | null
           district: string | null
           id: string
           photos: string[] | null
@@ -209,6 +211,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           description: string
+          desired_end_date?: string | null
+          desired_start_date?: string | null
           district?: string | null
           id?: string
           photos?: string[] | null
@@ -224,6 +228,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           description?: string
+          desired_end_date?: string | null
+          desired_start_date?: string | null
           district?: string | null
           id?: string
           photos?: string[] | null
