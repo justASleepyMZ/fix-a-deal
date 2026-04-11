@@ -23,12 +23,15 @@ const KAZAKHSTAN_CITIES = [
   "Temirtau", "Turkestan", "Taldykorgan", "Ekibastuz", "Rudny",
 ];
 
+const CITY_STORAGE_KEY = "fixadeal_priority_city";
+const CITY_CHOSEN_KEY = "fixadeal_city_chosen";
+
 const Requests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [priorityCity, setPriorityCity] = useState<string | null>(null);
-  const [cityChosen, setCityChosen] = useState(false);
+  const [priorityCity, setPriorityCity] = useState<string | null>(() => localStorage.getItem(CITY_STORAGE_KEY));
+  const [cityChosen, setCityChosen] = useState(() => localStorage.getItem(CITY_CHOSEN_KEY) === "true");
   const [minRating, setMinRating] = useState(0);
   const { effectiveRole } = useRole();
   const { user } = useAuth();
@@ -124,11 +127,21 @@ const Requests = () => {
   const handleCitySelect = (city: string) => {
     setPriorityCity(city);
     setCityChosen(true);
+    localStorage.setItem(CITY_STORAGE_KEY, city);
+    localStorage.setItem(CITY_CHOSEN_KEY, "true");
   };
 
   const handleSkipCity = () => {
     setPriorityCity(null);
     setCityChosen(true);
+    localStorage.removeItem(CITY_STORAGE_KEY);
+    localStorage.setItem(CITY_CHOSEN_KEY, "true");
+  };
+
+  const handleChangeCity = () => {
+    setCityChosen(false);
+    localStorage.removeItem(CITY_CHOSEN_KEY);
+    localStorage.removeItem(CITY_STORAGE_KEY);
   };
 
   // City picker overlay
