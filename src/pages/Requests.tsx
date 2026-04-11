@@ -23,12 +23,15 @@ const KAZAKHSTAN_CITIES = [
   "Temirtau", "Turkestan", "Taldykorgan", "Ekibastuz", "Rudny",
 ];
 
+const CITY_STORAGE_KEY = "fixadeal_priority_city";
+const CITY_CHOSEN_KEY = "fixadeal_city_chosen";
+
 const Requests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [priorityCity, setPriorityCity] = useState<string | null>(null);
-  const [cityChosen, setCityChosen] = useState(false);
+  const [priorityCity, setPriorityCity] = useState<string | null>(() => localStorage.getItem(CITY_STORAGE_KEY));
+  const [cityChosen, setCityChosen] = useState(() => localStorage.getItem(CITY_CHOSEN_KEY) === "true");
   const [minRating, setMinRating] = useState(0);
   const { effectiveRole } = useRole();
   const { user } = useAuth();
@@ -124,11 +127,21 @@ const Requests = () => {
   const handleCitySelect = (city: string) => {
     setPriorityCity(city);
     setCityChosen(true);
+    localStorage.setItem(CITY_STORAGE_KEY, city);
+    localStorage.setItem(CITY_CHOSEN_KEY, "true");
   };
 
   const handleSkipCity = () => {
     setPriorityCity(null);
     setCityChosen(true);
+    localStorage.removeItem(CITY_STORAGE_KEY);
+    localStorage.setItem(CITY_CHOSEN_KEY, "true");
+  };
+
+  const handleChangeCity = () => {
+    setCityChosen(false);
+    localStorage.removeItem(CITY_CHOSEN_KEY);
+    localStorage.removeItem(CITY_STORAGE_KEY);
   };
 
   // City picker overlay
@@ -184,10 +197,15 @@ const Requests = () => {
               {priorityCity && (
                 <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                   <MapPin className="h-3 w-3" /> {priorityCity}
-                  <button onClick={() => { setPriorityCity(null); setCityChosen(false); }} className="ml-1 hover:text-primary/70">
-                    <X className="h-3 w-3" />
-                  </button>
+                   <button onClick={handleChangeCity} className="ml-1 hover:text-primary/70">
+                     <X className="h-3 w-3" />
+                   </button>
                 </span>
+              )}
+              {!priorityCity && (
+                <button onClick={handleChangeCity} className="ml-2 text-xs text-primary hover:underline">
+                  <MapPin className="mr-0.5 inline h-3 w-3" />Select city
+                </button>
               )}
             </p>
           </div>

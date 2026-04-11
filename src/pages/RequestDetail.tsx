@@ -361,8 +361,8 @@ const RequestDetail = () => {
                               </div>
                               {offer.message && <p className="mt-1 text-sm text-muted-foreground">{offer.message}</p>}
 
-                              {/* Worker rates customer — only on accepted offers */}
-                              {!isOwner && offer.worker_id === user?.id && offer.status === "accepted" && (
+                              {/* Worker rates customer */}
+                              {!isOwner && offer.worker_id === user?.id && (
                                 <div className="mt-2 flex items-center gap-2">
                                   <span className="text-xs text-muted-foreground">Rate customer:</span>
                                   <StarRating
@@ -388,8 +388,8 @@ const RequestDetail = () => {
                                 </div>
                               )}
 
-                              {/* Customer rates worker — only on accepted offers */}
-                              {isOwner && offer.status === "accepted" && (
+                              {/* Customer rates worker */}
+                              {isOwner && (
                                 <div className="mt-2 flex items-center gap-2">
                                   <span className="text-xs text-muted-foreground">Rate worker:</span>
                                   <StarRating
