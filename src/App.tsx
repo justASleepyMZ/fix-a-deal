@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import CreateRequest from "./pages/CreateRequest";
+import MyRequests from "./pages/MyRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/requests" element={<Requests />} />
               <Route path="/requests/new" element={<CreateRequest />} />
               <Route path="/requests/:id" element={<RequestDetail />} />
+              <Route path="/my-requests" element={<MyRequests />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />

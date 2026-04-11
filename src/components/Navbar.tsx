@@ -30,6 +30,7 @@ const Navbar = () => {
   const links = [
     { to: "/", label: "Home" },
     { to: "/requests", label: "Browse Requests" },
+    ...(user ? [{ to: "/my-requests", label: "My Requests" }] : []),
     { to: "/how-it-works", label: "How It Works" },
   ];
 
